@@ -1,0 +1,52 @@
+CHIP ALU {
+
+  IN x[16], y[16], zx, nx, zy, ny, f, no;
+  OUT out[16], zr, ng;
+
+  PARTS:
+  /*  zx operation
+      zeros the x value if zx is 1
+      x0 is the value of x after the operation    */
+  And16(a=x, b=false, out=xzx);
+  Mux16(a=x, b=xzx, sel=zx, out=x0);
+
+  /*  nx operation
+      negates the x value if nx is 1
+      x1 is the value of x after the operation    */
+  Not16(in=x0, out=xnx);
+  Mux16(a=x0, b=xnx, sel=nx, out=x1);
+
+  /*  zy operation
+      zeros the y value if zy is 1
+      y0 is the value of y after the operation    */
+  And16(a=y, b=false, out=yzy);
+  Mux16(a=y, b=yzy, sel=zy, out=y0);
+
+  /*  ny operation
+      negates the y value if ny is 1
+      y1 is the value of y after the operation    */
+  Not16(in=y0, out=yny);
+  Mux16(a=y0, b=yny, sel=ny, out=y1);
+
+  /*  f operation
+      Ands x and y if f is 0
+      Adds x and y if f is 1
+      f0 is the value after the operation    */
+  And16(a=x1, b=y1, out=fand);
+  Add16(a=x1, b=y1, out=fadd);
+  Mux16(a=fand, b=fadd, sel=f, out=f0);
+
+  /*  no operation
+      negates the output if no is 1
+      out is the value after the operation
+      returns ng=1 if out<0    */
+  Not16(in=f0, out=n0);
+  Mux16(a=f0, b=n0, sel=no, out=out, out[0..7]=out1, out[8..15]=out2, out[15]=ng);
+
+  /*  zr
+      returns 1 if out==0    */
+  Or8Way(in=out1, out=zr0);
+  Or8Way(in=out2, out=zr1);
+  Nor(a=zr0, b=zr1, out=zr);
+
+}

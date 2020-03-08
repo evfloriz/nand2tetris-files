@@ -1,0 +1,46 @@
+CHIP CPU {
+
+  IN inM[16],                 // reading from the memory M (at address A)
+    instruction[16],          // machine language instruction that needs to be executed
+    reset;                    // resets the program counter to 0 if high
+  OUT outM[16],               // data to send to memory M (at address A) (irrelevant if writeM is 0)
+    writeM,                   // writes the data to M if 1
+    addressM[15],             // address of M (A)
+    pc[15];                   // address of the next instruction (goes to the ROM aka instruction memory)
+
+  PARTS:
+  // ALU chip
+  ALU(x=regD, y=AM, zx=instruction[11], nx=instruction[10], zy=instruction[9],
+    ny=instruction[8], f=instruction[7], no=instruction[6], out=outM, out=inputD, ng=neg0, zr=zero0);
+
+  // instruction decoding (i xx a cccccc ddd jjj)
+
+  // D register
+  And(a=instruction[4], b=instruction[15], out=loadD);
+  DRegister(in=inputD, load=loadD, out=regD);
+
+  // A register
+  Mux16(a=inputD, b=instruction, sel=tempIn0, out=inputA);
+  Not(in=instruction[15], out=tempIn0);
+  Or(a=tempIn0, b=instruction[5], out=loadA);
+  ARegister(in=inputA, load=loadA, out=regA, out[0..14]=addressM);
+  Mux16(a=regA, b=inM, sel=instruction[12], out=AM);
+
+  // writeM output
+  And(a=instruction[15], b=instruction[3], out=writeM);
+
+  // program counter
+  Or(a=neg0, b=zero0, out=pos0);
+  Not(in=pos0, out=pos1);
+  And(a=instruction[2], b=neg0, out=jump0);
+  And(a=instruction[1], b=zero0, out=jump1);
+  And(a=instruction[0], b=pos1, out=jump2);
+  Or(a=jump0, b=jump1, out=jump3);
+  Or(a=jump2, b=jump3, out=jump4);
+  And(a=instruction[15], b=jump4, out=jump5);
+  Nand(a=true, b=jump5, out=inc0);
+  PC(in=regA, inc=inc0, load=jump5, reset=reset, out[0..14]=pc);
+
+
+
+}
